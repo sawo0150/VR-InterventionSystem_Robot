@@ -1,0 +1,51 @@
+ekf_filter_node:
+  ros__parameters:
+    #################################################################
+    # 기본 설정
+    #################################################################
+    frequency: 30.0        # EKF 출력 주기 (Hz)
+    sensor_timeout: 0.1
+    two_d_mode: true       # 바닥면(2D) 로봇이므로 true
+    publish_tf: true       # 이 EKF가 odom -> base_link TF를 발행
+    publish_acceleration: false
+
+    map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
+    world_frame: odom      # 글로벌 데이터(GPS 등) 없으니 world=odom
+
+    #################################################################
+    # Lidar Odometry (rf2o) 입력
+    #################################################################
+    # rf2o_laser_odometry가 내보내는 nav_msgs/Odometry 토픽
+    odom0: /odom_rf2o
+
+    # 사용할 상태들 (x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az)
+    # 여기서는 x, y, vyaw 만 사용 (rf2o에서 잘 나오는 값 위주)
+    odom0_config: [true,  true,  false,
+                   false, false, false,
+                   false, false, false,
+                   false, false, true,
+                   false, false, false]
+
+    odom0_differential: false
+    odom0_relative: false
+    odom0_queue_size: 10
+
+    #################################################################
+    # IMU 입력 (hfi-a9)
+    #################################################################
+    # 실제 IMU 토픽 이름(예: /imu/data)으로 바꿔줘야 함!
+    imu0: /taobotics/sensor
+
+    # IMU에서는 orientation(roll, pitch, yaw)만 사용
+    imu0_config: [false, false, false,
+                  true,  true,  true,
+                  false, false, false,
+                  false, false, false,
+                  false, false, false]
+
+    imu0_differential: false
+    imu0_relative: false
+    imu0_queue_size: 10
+    imu0_remove_gravitational_acceleration: true

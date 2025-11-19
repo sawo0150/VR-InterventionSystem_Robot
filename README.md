@@ -1,5 +1,8 @@
 # **VR Intervention Delivery Robot (ROS 2 Project)**
 
+rf2o_laser_odometry
+robot-localization
+
 **VR 개입 기반 배달 로봇 시스템**의 ROS 2 워크스페이스입니다.
 
 이 프로젝트는 \*\*자율주행(Nav2)\*\*을 기본으로 하되, 난관 봉착 시 **VR 원격 제어**로 부드럽게 전환되는 하이브리드 제어 시스템을 구현합니다.

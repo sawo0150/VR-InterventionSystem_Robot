@@ -1,0 +1,6 @@
+# vris_sensors/config/imu_taobotics.yaml
+imu_taobotics:
+  serial_port: /dev/ttyUSB1
+  sensor_model: hfi-a9
+  sensor_frame_id: imu_link
+  robot_frame_id: base_link

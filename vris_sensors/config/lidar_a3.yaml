@@ -1,0 +1,9 @@
+# vris_sensors/config/lidar_a3.yaml
+sllidar:
+  channel_type: serial
+  serial_port: /dev/ttyUSB0
+  serial_baudrate: 256000
+  frame_id: laser
+  inverted: false
+  angle_compensate: true
+  scan_mode: Sensitivity
