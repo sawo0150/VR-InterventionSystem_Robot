@@ -14,7 +14,7 @@ find_package(tf2_ros REQUIRED)
 find_package(slam_toolbox REQUIRED)
 
 install(
-  DIRECTORY launch config
+  DIRECTORY launch config rviz maps
   DESTINATION share/${PROJECT_NAME}
 )
 
