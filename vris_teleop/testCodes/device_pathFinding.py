@@ -1,0 +1,7 @@
+import evdev
+from evdev import InputDevice
+
+devices = [InputDevice(path) for path in evdev.list_devices()]
+
+for device in devices:
+    print(device.path, device.name, device.phys)
