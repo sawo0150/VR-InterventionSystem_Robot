@@ -6,7 +6,8 @@ from aiortc.rtcicetransport import candidate_from_aioice
 
 # --- 시그널링 서버 주소 ---
 # SIGNALING_SERVER_URL = "ws://192.168.0.29:8080"  # ◀◀◀ Unity와 동일한 주소 입력
-SIGNALING_SERVER_URL = "ws://147.47.128.72:8080"  # ◀◀◀ Unity와 동일한 주소 입력
+SIGNALING_SERVER_URL = "ws://192.168.0.7:8080"  # ◀◀◀ Unity와 동일한 주소 입력
+# SIGNALING_SERVER_URL = "ws://147.47.128.72:8080"  # ◀◀◀ Unity와 동일한 주소 입력
 # SIGNALING_SERVER_URL = "ws://192.168.247.247:8080"  # ◀◀◀ 휴대폰 핫스팟
 # SIGNALING_SERVER_URL = "ws://192.168.137.1:8080"  # ◀◀◀ 노트북 핫스팟
 

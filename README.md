@@ -2,6 +2,7 @@
 
 rf2o_laser_odometry
 robot-localization
+주의 - window 쪽 방화벽을 아예 열어버려야 정신건강에 좋음
 
 **VR 개입 기반 배달 로봇 시스템**의 ROS 2 워크스페이스입니다.
 
