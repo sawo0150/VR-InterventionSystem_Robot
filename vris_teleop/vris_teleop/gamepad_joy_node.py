@@ -12,9 +12,9 @@ from geometry_msgs.msg import Twist
 def select_gamepad_device():
     """phys에 'input0' 포함된 디바이스를 우선 선택, 없으면 첫 번째 디바이스."""
     devices = [InputDevice(path) for path in evdev.list_devices()]
-    print("=== Devices ===")
-    for d in devices:
-        print(d.path, d.name, d.phys)
+    # print("=== Devices ===")
+    # for d in devices:
+    #     print(d.path, d.name, d.phys)
 
     if not devices:
         raise RuntimeError("No input devices found.")
@@ -22,24 +22,24 @@ def select_gamepad_device():
     # 1순위: phys에 'input0'이 들어간 디바이스
     for d in devices:
         if d.phys and 'input0' in d.phys:
-            print(f"Selected (phys contains 'input0'): {d.path} {d.name} {d.phys}")
+            # print(f"Selected (phys contains 'input0'): {d.path} {d.name} {d.phys}")
             return d
 
     # 없으면 걍 첫 번째
     d = devices[0]
-    print(f"No 'input0' in phys. Fallback to: {d.path} {d.name} {d.phys}")
+    # print(f"No 'input0' in phys. Fallback to: {d.path} {d.name} {d.phys}")
     return d
 
 # 1) 연결된 input 디바이스 목록 출력
 devices = [InputDevice(path) for path in evdev.list_devices()]
-print("=== Devices ===")
+# print("=== Devices ===")
 for d in devices:
     print(d.path, d.name, d.phys)
 
 # 2) 사용할 gamepad 경로 입력
 # device_path = input("사용할 gamepad 경로를 입력하세요 (예: /dev/input/event17): ").strip()
 gamepad = select_gamepad_device()
-print(f"\nUsing device: {gamepad.path} ({gamepad.name})\n")
+# print(f"\nUsing device: {gamepad.path} ({gamepad.name})\n")
 
 # 2-1) ROS2 초기화 및 퍼블리셔 생성
 rclpy.init()
@@ -86,7 +86,7 @@ axes = {
 }
 
 
-print("버튼/조이스틱 입력 대기 중... (Ctrl+C 로 종료)\n")
+# print("버튼/조이스틱 입력 대기 중... (Ctrl+C 로 종료)\n")
 
 try:
     while rclpy.ok():
@@ -109,13 +109,13 @@ try:
                 # 2(autorepeat) 같은 값이 올 수도 있어서 표시만 해줌
                 state = f'other({event.value})'
 
-            print(f"[KEY] Button {name:14s} (code={event.code}) {state}")
+            # print(f"[KEY] Button {name:14s} (code={event.code}) {state}")
 
         # 조이스틱/축(ABS) 이벤트
         elif event.type == ecodes.EV_ABS:
             axis_name = axes.get(event.code, f'Unknown({event.code})')
             value = event.value
-            print(f"[ABS] Axis   {axis_name:14s} (code={event.code}) value={value}")
+            # print(f"[ABS] Axis   {axis_name:14s} (code={event.code}) value={value}")
 
             # 현재 축 상태 갱신
             if event.code in axis_state:
@@ -141,8 +141,8 @@ try:
 
             cmd_pub.publish(twist)
 
-except KeyboardInterrupt:
-    print("\n종료합니다.")
+# except KeyboardInterrupt:
+#     # print("\n종료합니다.")
 finally:
     node.destroy_node()
     rclpy.shutdown()

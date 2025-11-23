@@ -1,4 +1,6 @@
-// ==== 모터 드라이버 핀 정의 ====
+#include <Arduino.h>
+
+// ---- 모터 드라이버 핀 정의 (기존 그대로) ----
 // 왼쪽 모터 드라이버
 const int L_RPWM = 11;   // 왼쪽 RPWM (PWM)
 const int L_LPWM = 10;   // 왼쪽 LPWM (PWM)
@@ -11,65 +13,20 @@ const int R_LPWM = 8;    // 오른쪽 LPWM (PWM)
 const int R_REN  = 2;    // 오른쪽 R_EN
 const int R_LEN  = 3;    // 오른쪽 L_EN
 
-// 속도 값 (0~255)
-const int SPEED_FORWARD = 255;
-const int SPEED_BACK    = 255;
-const int SPEED_TURN    = 255;
+// 최대 PWM 값
+const int MAX_PWM = 255;
 
-void setup() {
-  Serial.begin(9600);   // ROS2 노드와 동일하게 맞출 것
-  Serial.println("Arduino MOTOR DRIVER START");
+// 디버깅용 LED (보드 내장 LED)
+const int LED_PIN = LED_BUILTIN;
 
-  // 모터 핀 모드 설정
-  pinMode(L_RPWM, OUTPUT);
-  pinMode(L_LPWM, OUTPUT);
-  pinMode(L_REN,  OUTPUT);
-  pinMode(L_LEN,  OUTPUT);
+// 디버깅/워치독용 상태 변수
+unsigned long lastCmdTime = 0;
+unsigned long lastStatusPrint = 0;
+int lastLeftPWM = 0;
+int lastRightPWM = 0;
+long cmdCount = 0;
 
-  pinMode(R_RPWM, OUTPUT);
-  pinMode(R_LPWM, OUTPUT);
-  pinMode(R_REN,  OUTPUT);
-  pinMode(R_LEN,  OUTPUT);
-
-  // 드라이버 Enable 활성화
-  digitalWrite(L_REN, HIGH);
-  digitalWrite(L_LEN, HIGH);
-  digitalWrite(R_REN, HIGH);
-  digitalWrite(R_LEN, HIGH);
-
-  // 처음엔 정지
-  stopMotors();
-}
-
-void loop() {
-  // PC(ROS2)에서 시리얼로 보내는 명령 처리
-  if (Serial.available()) {
-    char cmd = Serial.read();
-    Serial.print("CMD: ");
-    Serial.println(cmd);
-
-    switch (cmd) {
-      case 'F':   // 앞으로
-        moveForward();
-        break;
-      case 'B':   // 뒤로
-        moveBackward();
-        break;
-      case 'L':   // 왼쪽 회전
-        turnLeft();
-        break;
-      case 'R':   // 오른쪽 회전
-        turnRight();
-        break;
-      case 'S':   // 정지
-      default:
-        stopMotors();
-        break;
-    }
-  }
-}
-
-// ---------------- 모터 제어 함수들 ----------------
+// ---------------- 모터 제어 함수들 (기존 그대로) ----------------
 
 // 왼쪽 모터: 정/역/정지
 void leftMotorForward(int speed) {
@@ -103,31 +60,123 @@ void rightMotorStop() {
   analogWrite(R_LPWM, 0);
 }
 
-// ---------------- 동작 패턴 함수들 ----------------
-
-void moveForward() {
-  leftMotorForward(SPEED_FORWARD);
-  rightMotorForward(SPEED_FORWARD);
-}
-
-void moveBackward() {
-  leftMotorBackward(SPEED_BACK);
-  rightMotorBackward(SPEED_BACK);
-}
-
-void turnLeft() {
-  // 왼쪽 멈추고 오른쪽 앞으로
-  leftMotorStop();
-  rightMotorForward(SPEED_TURN);
-}
-
-void turnRight() {
-  // 오른쪽 멈추고 왼쪽 앞으로
-  rightMotorStop();
-  leftMotorForward(SPEED_TURN);
-}
-
+// 두 바퀴 모두 정지
 void stopMotors() {
   leftMotorStop();
   rightMotorStop();
+}
+
+// ---------------- PWM 적용 함수 ----------------
+
+// 왼/오 PWM(-255~255)을 받아서 방향+세기로 변환
+void setMotorPWM(int leftPWM, int rightPWM) {
+  // 안전 범위 제한
+  leftPWM  = constrain(leftPWM,  -MAX_PWM, MAX_PWM);
+  rightPWM = constrain(rightPWM, -MAX_PWM, MAX_PWM);
+
+  // 왼쪽 모터
+  if (leftPWM > 0) {
+    leftMotorForward(leftPWM);
+  } else if (leftPWM < 0) {
+    leftMotorBackward(-leftPWM);  // 절댓값
+  } else {
+    leftMotorStop();
+  }
+
+  // 오른쪽 모터
+  if (rightPWM > 0) {
+    rightMotorForward(rightPWM);
+  } else if (rightPWM < 0) {
+    rightMotorBackward(-rightPWM);
+  } else {
+    rightMotorStop();
+  }
+}
+
+void setup() {
+  Serial.begin(115200);   // ROS2 노드와 동일한 baudrate로 맞추기
+
+  // 모터 핀 모드 설정
+  pinMode(L_RPWM, OUTPUT);
+  pinMode(L_LPWM, OUTPUT);
+  pinMode(L_REN,  OUTPUT);
+  pinMode(L_LEN,  OUTPUT);
+
+  pinMode(R_RPWM, OUTPUT);
+  pinMode(R_LPWM, OUTPUT);
+  pinMode(R_REN,  OUTPUT);
+  pinMode(R_LEN,  OUTPUT);
+
+  // 드라이버 Enable 활성화
+  digitalWrite(L_REN, HIGH);
+  digitalWrite(L_LEN, HIGH);
+  digitalWrite(R_REN, HIGH);
+  digitalWrite(R_LEN, HIGH);
+
+  // parseInt 타임아웃 (ms)
+  // 너무 짧으면 두 번째 숫자를 0으로 읽는 경우가 있어서 약간 여유를 줌
+  Serial.setTimeout(50);
+
+  // 디버깅용 LED 설정
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+
+  stopMotors();
+
+  Serial.println("Arduino motor controller started");
+}
+
+void loop() {
+  
+  unsigned long now = millis();
+
+  // ----- 워치독: 일정 시간 동안 명령이 없으면 정지 -----
+  if ((now - lastCmdTime) > 500 && (lastLeftPWM != 0 || lastRightPWM != 0)) {
+    setMotorPWM(0, 0);
+  }
+
+  // 주기적으로 상태 출력 (1초마다)
+  if (now - lastStatusPrint > 1000) {
+    lastStatusPrint = now;
+    Serial.print("[STATUS] t=");
+    Serial.print(now);
+    Serial.print(" ms, cmds=");
+    Serial.print(cmdCount);
+    Serial.print(", last L=");
+    Serial.print(lastLeftPWM);
+    Serial.print(", R=");
+    Serial.println(lastRightPWM);
+  }
+
+  // 시리얼로부터 "왼PWM 오른PWM\n" 형식으로 값 수신
+  if (Serial.available() > 0) {
+    // 숫자 2개 읽기 (parseInt는 숫자/마이너스 외엔 무시)
+    int leftPWM  = Serial.parseInt();   // 첫 번째 숫자
+    int rightPWM = Serial.parseInt();   // 두 번째 숫자
+
+    // 줄 끝까지 버퍼 비우기 (옵션)
+    while (Serial.available()) {
+      char c = Serial.read();
+      if (c == '\n' || c == '\r') break;
+    }
+
+    // 디버깅용 상태 업데이트
+    lastCmdTime = now;
+    lastLeftPWM = leftPWM;
+    lastRightPWM = rightPWM;
+    cmdCount++;
+
+    // 값이 실제로 들어왔는지 간단 체크 (필요시 추가)
+    setMotorPWM(leftPWM, rightPWM);
+
+    // 디버그 출력
+    Serial.print("Set PWM L: ");
+    Serial.print(leftPWM);
+    Serial.print("  R: ");
+    Serial.println(rightPWM);
+
+    // 명령 한 번 받을 때마다 LED 토글 (깜빡임으로 상태 확인)
+    digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+    
+  }
 }

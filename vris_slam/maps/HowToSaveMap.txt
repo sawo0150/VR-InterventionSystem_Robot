@@ -2,7 +2,7 @@
 cd ~/Desktop/VR_intervention_system/VR-InterventionSystem_ws/src/VR-InterventionSystem_Robot/vris_slam/maps
 
 # 2. Nav2 Map Saver 실행 (현재 폴더에 office_map 이라는 이름으로 저장)
-ros2 run nav2_map_server map_saver_cli -f office_map
+ros2 run nav2_map_server map_saver_cli -f dorm
 
 map 이름은 알아서 수정하면 됨.
 
