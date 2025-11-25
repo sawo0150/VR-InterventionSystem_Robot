@@ -14,6 +14,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         # [추가] launch 폴더 안의 모든 .launch.py 파일을 share 영역으로 복사
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
+        (os.path.join('share', package_name, 'PWMmatching'), glob('PWMmatching/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -29,6 +30,7 @@ setup(
     entry_points={
         'console_scripts': [
             'cmd_vel_to_serial = vris_base_hw.cmd_vel_to_serial:main',
+            'pwm_matching_tool = vris_base_hw.PWMmatching.pwm_matching_tool:main',
         ],
     },
 )

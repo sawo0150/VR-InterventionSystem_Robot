@@ -1,0 +1,33 @@
+# 어떤 PWM 조합을 어떤 순서로 실험할지 정의
+tests:
+  # 예: 제자리 회전 (왼+ 오른-)
+  - name: "rot_low"
+    left_pwm: 60
+    right_pwm: -60
+    duration: 5.0
+  - name: "rot_mid"
+    left_pwm: 120
+    right_pwm: -120
+    duration: 5.0
+  - name: "rot_high"
+    left_pwm: 180
+    right_pwm: -180
+    duration: 5.0
+
+  # 필요하면 더 추가
+  - name: "rot_very_high"
+    left_pwm: 220
+    right_pwm: -220
+    duration: 5.0
+
+# 구간별 1차식 피팅을 위한 PWM 범위 정의 (절댓값 기준)
+segments:
+  - name: "low"
+    pwm_min: 40
+    pwm_max: 100
+  - name: "mid"
+    pwm_min: 100
+    pwm_max: 170
+  - name: "high"
+    pwm_min: 170
+    pwm_max: 255
