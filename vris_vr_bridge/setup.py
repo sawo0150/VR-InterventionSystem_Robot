@@ -29,6 +29,8 @@ setup(
     entry_points={
         'console_scripts': [
             'vr_bridge = vris_vr_bridge.vr_bridge_node:main', # 이 부분 추가
+            'vr_bridge_nodeManager = vris_vr_bridge.vr_bridge_nodeManager:main', # 이 부분 추가
+            'map_visualizer_node = vris_vr_bridge.map_visualizer_node:main', # 이 부분 추가
         ],
     },
 )

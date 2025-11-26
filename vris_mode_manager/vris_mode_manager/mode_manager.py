@@ -56,6 +56,13 @@ class ModeManagerNode(Node):
 
         if self.error_state:
             # 오류면 무조건 정지
+            # VR 모드 → VR 입력 사용
+            out.linear.x = self.vr_cmd.linear.x
+            out.linear.y = self.vr_cmd.linear.y
+            out.linear.z = self.vr_cmd.linear.z
+            out.angular.x = self.vr_cmd.angular.x
+            out.angular.y = self.vr_cmd.angular.y
+            out.angular.z = self.vr_cmd.angular.z
             return out
 
         # 오류가 아니라면 모드에 따라 선택
@@ -191,7 +198,7 @@ def main(args=None):
             help_y += 25
             draw_text(screen, font_small, "VR    : /cmd_vel_robot = /cmd_vel_vr", (right_x + 20, help_y), (180, 255, 180))
             help_y += 25
-            draw_text(screen, font_small, "ERROR : /cmd_vel_robot = 0", (right_x + 20, help_y), (255, 180, 180))
+            draw_text(screen, font_small, "ERROR : /cmd_vel_robot = /cmd_vel_vr", (right_x + 20, help_y), (255, 180, 180))
 
             pygame.display.flip()
             clock.tick(30)  # 30 FPS 정도면 충분
