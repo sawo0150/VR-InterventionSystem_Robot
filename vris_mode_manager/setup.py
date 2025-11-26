@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'vris_teleop'
+package_name = 'vris_mode_manager'
 
 setup(
     name=package_name,
@@ -28,9 +28,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'gamepad_teleop = vris_teleop.gamepad_teleop_node:main',
-            'gamepad_joy = vris_teleop.gamepad_joy_node:main',
-            'gamepad_joyManager = vris_teleop.gamepad_joyManager:main',
+            'mode_manager = vris_mode_manager.mode_manager:main',
         ],
     },
 )

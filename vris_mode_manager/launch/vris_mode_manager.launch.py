@@ -5,12 +5,12 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         Node(
-            package='vris_teleop',
-            executable='gamepad_joyManager',  # 또는 설치한 executable 이름
-            name='gamepad_joyManager',
+            package='vris_mode_manager',
+            executable='mode_manager',   # setup.py / CMakeLists에 등록한 이름
+            name='vris_mode_manager',
             output='screen',
             parameters=[
-                # 필요하면 여기 나중에 파라미터 추가
+                # 나중에 필요하면 파라미터 추가
             ],
         ),
     ])
