@@ -1,0 +1,37 @@
+raw_results:
+- name: rot_low
+  left_pwm: 60
+  right_pwm: -60
+  avg_ang_vel_z: -0.14810570813715457
+- name: rot_mid
+  left_pwm: 120
+  right_pwm: -120
+  avg_ang_vel_z: -0.5002150291302165
+- name: rot_high
+  left_pwm: 180
+  right_pwm: -180
+  avg_ang_vel_z: -2.4312692284584045
+- name: rot_very_high
+  left_pwm: 220
+  right_pwm: -220
+  avg_ang_vel_z: -2.667211731274923
+segments:
+- name: low
+  pwm_min: 40
+  pwm_max: 100
+  slope: 0.0
+  intercept: 0.0
+  num_points: 1
+- name: mid
+  pwm_min: 100
+  pwm_max: 170
+  slope: 0.0
+  intercept: 0.0
+  num_points: 1
+- name: high
+  pwm_min: 170
+  pwm_max: 255
+  slope: 0.005898562570413049
+  intercept: 1.3695279657840542
+  num_points: 2
+note: vel = slope * |pwm| + intercept, where vel is |angular_velocity_z| [rad/s]

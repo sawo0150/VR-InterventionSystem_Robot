@@ -1,0 +1,105 @@
+
+#
+# 어떤 PWM 조합을 어떤 순서로 실험할지 정의
+#
+tests:
+  # 회전(calibration for angular velocity): 왼+ / 오-
+  - name: "rot_low_1"
+    mode: "rot"
+    left_pwm: 60
+    right_pwm: -60
+    duration: 5.0
+  - name: "rot_low_2"
+    mode: "rot"
+    left_pwm: 80
+    right_pwm: -80
+    duration: 5.0
+
+  - name: "rot_mid_1"
+    mode: "rot"
+    left_pwm: 120
+    right_pwm: -120
+    duration: 5.0
+  - name: "rot_mid_2"
+    mode: "rot"
+    left_pwm: 135
+    right_pwm: -135
+    duration: 5.0
+
+  - name: "rot_high_1"
+    mode: "rot"
+    left_pwm: 160
+    right_pwm: -160
+    duration: 5.0
+  - name: "rot_high_2"
+    mode: "rot"
+    left_pwm: 200
+    right_pwm: -200
+    duration: 5.0
+
+  - name: "rot_very_high"
+    mode: "rot"
+    left_pwm: 230
+    right_pwm: -230
+    duration: 5.0
+
+  # 직진(calibration for linear velocity): 왼+ / 오+
+  - name: "lin_low_1"
+    mode: "lin"
+    left_pwm: 60
+    right_pwm: 60
+    duration: 5.0
+  - name: "lin_low_2"
+    mode: "lin"
+    left_pwm: 100
+    right_pwm: 100
+    duration: 5.0
+
+  - name: "lin_mid_1"
+    mode: "lin"
+    left_pwm: 140
+    right_pwm: 140
+    duration: 5.0
+  - name: "lin_mid_2"
+    mode: "lin"
+    left_pwm: 180
+    right_pwm: 180
+    duration: 5.0
+
+  - name: "lin_high_1"
+    mode: "lin"
+    left_pwm: 200
+    right_pwm: 200
+    duration: 5.0
+  - name: "lin_high_2"
+    mode: "lin"
+    left_pwm: 230
+    right_pwm: 230
+    duration: 5.0
+
+#
+# 구간별 1차식 피팅을 위한 PWM 범위 정의 (절댓값 기준)
+#   - segments_ang: 회전 실험 결과(|angular_velocity_z|)용
+#   - segments_lin: 직진 실험 결과(|linear_velocity_x|)용
+#
+segments_ang:
+  - name: "low"
+    pwm_min: 40
+    pwm_max: 130
+  - name: "mid"
+    pwm_min: 130
+    pwm_max: 190
+  - name: "high"
+    pwm_min: 190
+    pwm_max: 255
+
+segments_lin:
+  - name: "low"
+    pwm_min: 40
+    pwm_max: 130
+  - name: "mid"
+    pwm_min: 130
+    pwm_max: 190
+  - name: "high"
+    pwm_min: 190
+    pwm_max: 255

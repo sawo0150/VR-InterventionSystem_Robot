@@ -1,0 +1,49 @@
+raw_results:
+- name: rot_low
+  mode: rot
+  left_pwm: 60
+  right_pwm: -60
+  avg_ang_vel_z: -0.21751452460885048
+  avg_lin_vel: 0.4528170555970636
+- name: rot_mid
+  mode: rot
+  left_pwm: 120
+  right_pwm: -120
+  avg_ang_vel_z: -0.5372628629207611
+  avg_lin_vel: 0.5310663256581534
+- name: rot_high
+  mode: rot
+  left_pwm: 180
+  right_pwm: -180
+  avg_ang_vel_z: -2.391008126735687
+  avg_lin_vel: 1.0458060363598394
+- name: rot_very_high
+  mode: rot
+  left_pwm: 220
+  right_pwm: -220
+  avg_ang_vel_z: -2.679281613865837
+  avg_lin_vel: 1.3795656203158257
+segments_angular:
+- name: low
+  pwm_min: 40
+  pwm_max: 100
+  slope: 0.0
+  intercept: 0.21751452460885048
+  num_points: 1
+- name: mid
+  pwm_min: 100
+  pwm_max: 170
+  slope: 0.0
+  intercept: 0.5372628629207611
+  num_points: 1
+- name: high
+  pwm_min: 170
+  pwm_max: 255
+  slope: 0.007206837178253664
+  intercept: 1.093777434650029
+  num_points: 2
+segments_linear: []
+note_angular: omega_z = slope * |pwm| + intercept, where omega_z is |angular_velocity_z|
+  [rad/s]
+note_linear: v = slope * |pwm| + intercept, where v is RMS(sqrt(v_x^2 + v_y^2)) from
+  IMU

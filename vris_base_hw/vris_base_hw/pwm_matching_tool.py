@@ -10,6 +10,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import Imu
 
 import pygame
+from ament_index_python.packages import get_package_share_directory
 
 
 class ImuCollector(Node):
@@ -25,7 +26,7 @@ class ImuCollector(Node):
             50
         )
 
-        # (timestamp, ang_vel_z) 리스트
+        # (timestamp, ang_vel_z, v_x, v_y) 리스트
         self.samples = []
         self.recording = False
         self.start_time = None
@@ -43,14 +44,20 @@ class ImuCollector(Node):
             return
         t = time.time() - self.start_time
         ang_z = msg.angular_velocity.z
-        self.samples.append((t, ang_z))
+        # 여기서는 IMU의 linear_acceleration.x/y를 v_x, v_y로 사용한다고 가정
+        vx = msg.linear_acceleration.x
+        vy = msg.linear_acceleration.y
+        self.samples.append((t, ang_z, vx, vy))
 
 
 def least_squares_fit(xs, ys):
     """간단한 최소제곱 1차식 피팅 (y = a*x + b)"""
     n = len(xs)
-    if n < 2:
-        return 0.0, 0.0  # 데이터가 너무 적으면 0 리턴
+    if n == 0:
+        return 0.0, 0.0  # 데이터가 전혀 없으면 0 리턴
+    if n == 1:
+        # 한 점만 있으면 기울기는 0, 절편은 그 점의 y값으로 둔다
+        return 0.0, ys[0]
 
     sum_x = sum(xs)
     sum_y = sum(ys)
@@ -70,20 +77,41 @@ def main():
     # ---------------- ROS2 초기화 ----------------
     rclpy.init()
 
-    # 기본 파라미터 (필요하면 launch에서 override 가능)
-    imu_topic = '/imu/data'
-    serial_port = '/dev/ttyACM0'
+    # 기본 파라미터 (필요하면 launch/params에서 override 가능)
+    imu_topic = '/taobotics/sensor'
     baudrate = 115200
-    config_path = os.path.join(
-        os.path.dirname(__file__),
+
+    # 패키지 share 디렉토리 기준 기본 config 경로
+    pkg_share = get_package_share_directory('vris_base_hw')
+    default_config_path = os.path.join(
+        pkg_share,
+        'config',
         'pwm_matching_config.yaml'
     )
-    output_dir = os.path.dirname(__file__)  # 기본: PWMmatching 폴더
 
-    # 환경변수/CLI로 바꾸고 싶으면 여기서 처리해도 됨
-    # ex) os.getenv('PWM_MATCHING_CONFIG', default=config_path)
-
+    # 노드 생성 후 ROS parameter 선언
     node = ImuCollector(imu_topic)
+
+    serial_port = node.declare_parameter(
+        'serial_port',
+        '/dev/ttyACM0'
+    ).value
+
+    config_path = node.declare_parameter(
+        'config_path',
+        default_config_path
+    ).value
+
+    # 결과 저장 디렉토리 (필요하면 launch/params에서 override)
+    default_output_dir = os.path.dirname(config_path)
+    output_dir = node.declare_parameter(
+        'output_dir',
+        default_output_dir
+    ).value
+
+    node.get_logger().info(
+        f"Using serial_port={serial_port}, config_path={config_path}, output_dir={output_dir}"
+    )
 
     # ---------------- 시리얼 오픈 ----------------
     try:
@@ -98,7 +126,9 @@ def main():
         cfg = yaml.safe_load(f)
 
     tests = cfg.get('tests', [])
-    segments_cfg = cfg.get('segments', [])
+    # 회전/직진 세그먼트를 각각 읽어온다
+    segments_ang_cfg = cfg.get('segments_ang', cfg.get('segments', []))
+    segments_lin_cfg = cfg.get('segments_lin', [])
 
     if not tests:
         node.get_logger().error("No tests defined in config.")
@@ -113,7 +143,11 @@ def main():
     clock = pygame.time.Clock()
 
     # ---------------- 실험 결과 저장용 ----------------
-    # 각 항목: {name, left_pwm, right_pwm, avg_ang_vel_z}
+    # 각 항목:
+    #   {
+    #     name, mode, left_pwm, right_pwm,
+    #     avg_ang_vel_z, avg_lin_vel
+    #   }
     results = []
 
     current_test_idx = 0
@@ -127,7 +161,7 @@ def main():
         if current_test_idx < len(tests):
             test = tests[current_test_idx]
             text_lines = [
-                f"Test {current_test_idx+1} / {len(tests)} : {test['name']}",
+                f"Test {current_test_idx+1} / {len(tests)} : {test['name']} (mode={test.get('mode', 'rot')})",
                 f"  left_pwm = {test['left_pwm']}, right_pwm = {test['right_pwm']}",
                 "",
                 f"Phase: {phase}",
@@ -140,7 +174,8 @@ def main():
                 "  - Set robot in safe area.",
                 "  - Press SPACE to start this test.",
                 "  - Robot will move for 'duration' seconds.",
-                "  - 2~4s 구간의 IMU angular.z를 평균 내서 속도로 사용.",
+                "  - 2~4s 구간의 IMU angular.z 평균 및",
+                "    v_x, v_y로부터 RMS linear speed를 계산.",
             ]
         else:
             text_lines = [
@@ -161,7 +196,13 @@ def main():
         y += 30
 
         for r in results[-5:]:
-            line = f"{r['name']}: L={r['left_pwm']}, R={r['right_pwm']}, avg ang.z={r['avg_ang_vel_z']:.3f}"
+            line = (
+                f"{r['name']} (mode={r.get('mode', 'rot')}): "
+                f"L={r['left_pwm']}, R={r['right_pwm']}, "
+                f"avg ang.z={r['avg_ang_vel_z']:.3f}, "
+                f"avg lin={r['avg_lin_vel']:.3f}"
+            )
+
             surf = font.render(line, True, (180, 180, 180))
             screen.blit(surf, (40, y))
             y += 25
@@ -186,11 +227,13 @@ def main():
                         test = tests[current_test_idx]
                         duration = float(test.get('duration', 5.0))
 
+                        mode = test.get('mode', 'rot')
+
                         node.get_logger().info(
                             f"Starting test {current_test_idx+1}/{len(tests)}: "
-                            f"{test['name']} (L={test['left_pwm']}, R={test['right_pwm']}, dur={duration}s)"
+                            f"{test['name']} [mode={mode}] "
+                            f"(L={test['left_pwm']}, R={test['right_pwm']}, dur={duration}s)"
                         )
-
                         # IMU 기록 시작
                         node.start_recording()
 
@@ -224,29 +267,43 @@ def main():
                 except serial.SerialException as e:
                     node.get_logger().error(f"Serial write error on stop: {e}")
 
-                # 2~4초 사이의 IMU angular.z 평균
-                valid_samples = [
-                    ang_z for (t, ang_z) in node.samples
+                # 2~4초 사이의 IMU angular.z 평균 및 linear RMS 속도 계산
+                imu_window = [
+                    (ang_z, vx, vy)
+                    for (t, ang_z, vx, vy) in node.samples
                     if 2.0 <= t <= 4.0
                 ]
-                if valid_samples:
-                    avg_ang_z = sum(valid_samples) / len(valid_samples)
+
+                if imu_window:
+                    ang_vals = [ang_z for (ang_z, _, _) in imu_window]
+                    avg_ang_z = sum(ang_vals) / len(ang_vals)
+
+                    # v_x, v_y로부터 RMS linear speed 계산
+                    sum_sq = 0.0
+                    for _, vx, vy in imu_window:
+                        sum_sq += math.sqrt(vx * vx + vy * vy)
+                    avg_lin_v = sum_sq / len(imu_window)
                 else:
                     avg_ang_z = 0.0
+                    avg_lin_v = 0.0
                     node.get_logger().warn(
                         f"No IMU samples in 2~4s window for test {test['name']}"
                     )
 
                 node.get_logger().info(
-                    f"Test {test['name']} done. avg angular.z = {avg_ang_z:.4f} rad/s "
-                    f"({len(valid_samples)} samples)"
+                    f"Test {test['name']} done. "
+                    f"avg angular.z = {avg_ang_z:.4f} rad/s, "
+                    f"avg linear speed (RMS) = {avg_lin_v:.4f} (IMU units) "
+                    f"({len(imu_window)} samples)"
                 )
 
                 results.append({
                     'name': test['name'],
+                    'mode': test.get('mode', 'rot'),
                     'left_pwm': test['left_pwm'],
                     'right_pwm': test['right_pwm'],
                     'avg_ang_vel_z': float(avg_ang_z),
+                    'avg_lin_vel': float(avg_lin_v),
                 })
 
                 # 다음 테스트로
@@ -267,33 +324,29 @@ def main():
         pass
     ser.close()
 
-    # ---------------- 결과 처리: 구간별 1차 피팅 ----------------
-    # 여기서는 "PWM의 절댓값 vs |avg_ang_vel_z|" 로 피팅
-    abs_data = []
-    for r in results:
-        pwm_mag = max(abs(r['left_pwm']), abs(r['right_pwm']))
-        vel_mag = abs(r['avg_ang_vel_z'])
-        abs_data.append((pwm_mag, vel_mag))
 
-    segment_results = []
-    for seg in segments_cfg:
+    # ---------------- 결과 처리: 구간별 1차 피팅 ----------------
+    # 1) 회전: "PWM의 절댓값 vs |avg_ang_vel_z|" 로 피팅 (mode == 'rot')
+    segment_ang_results = []
+    for seg in segments_ang_cfg:
         name = seg['name']
         pmin = seg['pwm_min']
         pmax = seg['pwm_max']
         xs = []
         ys = []
 
-        for pwm_mag, vel_mag in abs_data:
+        for r in results:
+            if r.get('mode', 'rot') != 'rot':
+                continue
+            pwm_mag = max(abs(r['left_pwm']), abs(r['right_pwm']))
+            vel_mag = abs(r['avg_ang_vel_z'])
             if pmin <= pwm_mag <= pmax:
                 xs.append(pwm_mag)
                 ys.append(vel_mag)
 
-        if len(xs) < 2:
-            a, b = 0.0, 0.0
-        else:
-            a, b = least_squares_fit(xs, ys)
+        a, b = least_squares_fit(xs, ys)
 
-        segment_results.append({
+        segment_ang_results.append({
             'name': name,
             'pwm_min': pmin,
             'pwm_max': pmax,
@@ -303,8 +356,42 @@ def main():
         })
 
         node.get_logger().info(
-            f"Segment {name} [{pmin}, {pmax}] : y ≈ {a:.6f} * pwm + {b:.6f} "
-            f"(n={len(xs)})"
+            f"[Angular] Segment {name} [{pmin}, {pmax}] : "
+            f"|omega_z| ≈ {a:.6f} * |pwm| + {b:.6f} (n={len(xs)})"
+        )
+
+    # 2) 직진: "PWM의 절댓값 vs |avg_lin_vel|" 로 피팅 (mode == 'lin')
+    segment_lin_results = []
+    for seg in segments_lin_cfg:
+        name = seg['name']
+        pmin = seg['pwm_min']
+        pmax = seg['pwm_max']
+        xs = []
+        ys = []
+
+        for r in results:
+            if r.get('mode', 'rot') != 'lin':
+                continue
+            pwm_mag = max(abs(r['left_pwm']), abs(r['right_pwm']))
+            vel_mag = abs(r['avg_lin_vel'])
+            if pmin <= pwm_mag <= pmax:
+                xs.append(pwm_mag)
+                ys.append(vel_mag)
+
+        a, b = least_squares_fit(xs, ys)
+
+        segment_lin_results.append({
+            'name': name,
+            'pwm_min': pmin,
+            'pwm_max': pmax,
+            'slope': float(a),
+            'intercept': float(b),
+            'num_points': len(xs),
+        })
+
+        node.get_logger().info(
+            f"[Linear]  Segment {name} [{pmin}, {pmax}] : "
+            f"|v| ≈ {a:.6f} * |pwm| + {b:.6f} (n={len(xs)})"
         )
 
     # ---------------- 결과 YAML 저장 ----------------
@@ -314,8 +401,16 @@ def main():
 
     out_data = {
         'raw_results': results,
-        'segments': segment_results,
-        'note': 'vel = slope * |pwm| + intercept, where vel is |angular_velocity_z| [rad/s]',
+        'segments_angular': segment_ang_results,
+        'segments_linear': segment_lin_results,
+        'note_angular': (
+            'omega_z = slope * |pwm| + intercept, '
+            'where omega_z is |angular_velocity_z| [rad/s]'
+       ),
+        'note_linear': (
+            'v = slope * |pwm| + intercept, '
+            'where v is RMS(sqrt(v_x^2 + v_y^2)) from IMU'
+        ),
     }
 
     with open(out_path, 'w') as f:
