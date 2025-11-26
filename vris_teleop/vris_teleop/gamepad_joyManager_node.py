@@ -8,6 +8,7 @@ import time
 
 import rclpy
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool, String
 
 def select_gamepad_device():
     """phys에 'input0' 포함된 디바이스를 우선 선택, 없으면 첫 번째 디바이스."""
@@ -36,15 +37,33 @@ devices = [InputDevice(path) for path in evdev.list_devices()]
 for d in devices:
     print(d.path, d.name, d.phys)
 
-# 2) 사용할 gamepad 경로 입력
-# device_path = input("사용할 gamepad 경로를 입력하세요 (예: /dev/input/event17): ").strip()
+
 gamepad = select_gamepad_device()
-# print(f"\nUsing device: {gamepad.path} ({gamepad.name})\n")
 
 # 2-1) ROS2 초기화 및 퍼블리셔 생성
 rclpy.init()
-node = rclpy.create_node('gamepad_teleop_simple')
-cmd_pub = node.create_publisher(Twist, '/cmd_vel_robot', 10)
+node = rclpy.create_node('gamepad_joy_manager')
+
+# 왼쪽 스틱 → cmd_vel_joy, 오른쪽 스틱 → cmd_vel_vr
+joy_pub = node.create_publisher(Twist, '/cmd_vel_joy', 10)
+vr_pub = node.create_publisher(Twist, '/cmd_vel_vr', 10)
+
+# 오류 상태 / 모드 상태 토픽
+error_pub = node.create_publisher(Bool, '/system_error', 10)
+mode_pub = node.create_publisher(String, '/operation_mode', 10)
+
+# 내부 상태
+error_state = False       # False: 정상, True: 오류
+mode_state = "AUTO"       # "AUTO" 또는 "VR"
+
+# 초기 상태 한 번 전송
+err_msg = Bool()
+err_msg.data = error_state
+error_pub.publish(err_msg)
+
+mode_msg = String()
+mode_msg.data = mode_state
+mode_pub.publish(mode_msg)
 
 # 현재 조이스틱 축 상태 저장용 (raw 값)
 axis_state = {
@@ -109,7 +128,35 @@ try:
                 # 2(autorepeat) 같은 값이 올 수도 있어서 표시만 해줌
                 state = f'other({event.value})'
 
-            # print(f"[KEY] Button {name:14s} (code={event.code}) {state}")
+            # 버튼 눌림(pressed)에 따라 상태 토픽 업데이트
+            if event.value == 1:
+                # X 버튼: 오류 발생
+                if name == 'X':
+                    error_state = True
+                    msg = Bool()
+                    msg.data = True
+                    error_pub.publish(msg)
+
+                # Y 버튼: 정상 복귀
+                elif name == 'Y':
+                    error_state = False
+                    msg = Bool()
+                    msg.data = False
+                    error_pub.publish(msg)
+
+                # A 버튼: 자율주행(AUTO 모드)
+                elif name == 'A':
+                    mode_state = "AUTO"
+                    m = String()
+                    m.data = mode_state
+                    mode_pub.publish(m)
+
+                # B 버튼: VR 원격 개입 모드
+                elif name == 'B':
+                    mode_state = "VR"
+                    m = String()
+                    m.data = mode_state
+                    mode_pub.publish(m)
 
         # 조이스틱/축(ABS) 이벤트
         elif event.type == ecodes.EV_ABS:
@@ -121,25 +168,39 @@ try:
             if event.code in axis_state:
                 axis_state[event.code] = value
 
-            # Left stick 기준으로 /cmd_vel_robot 계산
+            # Left stick → /cmd_vel_joy, Right stick → /cmd_vel_vr
             lx_raw = axis_state.get(0, 128)  # Left X
             ly_raw = axis_state.get(1, 128)  # Left Y
+            rx_raw = axis_state.get(2, 128)  # Right X
+            ry_raw = axis_state.get(5, 128)  # Right Y
+
             # 0~255 -> -1.0 ~ 1.0 으로 정규화 (중앙 128 기준)
             def norm(v):
                 return (float(v) - 128.0) / 128.0
 
-            norm_x = norm(lx_raw)  # 좌우
-            norm_y = norm(ly_raw)  # 앞뒤
+            norm_x = norm(lx_raw)  # 좌우 (Left)
+            norm_y = norm(ly_raw)  # 앞뒤 (Left)
+            norm_x_r = norm(rx_raw)  # 좌우 (Right)
+            norm_y_r = norm(ry_raw)  # 앞뒤 (Right)
 
-            # 일반적으로 조이스틱은 위로 밀면 값이 감소(-1)라서 부호 반전
-            linear_x = -norm_y * MAX_LINEAR_VEL
-            angular_z = -norm_x * MAX_ANGULAR_VEL
+            # 왼쪽 스틱 → 조이스틱 주행용 cmd_vel_joy
+            linear_x_joy = -norm_y * MAX_LINEAR_VEL
+            angular_z_joy = -norm_x * MAX_ANGULAR_VEL
 
-            twist = Twist()
-            twist.linear.x = float(linear_x)
-            twist.angular.z = float(angular_z)
+            twist_joy = Twist()
+            twist_joy.linear.x = float(linear_x_joy)
+            twist_joy.angular.z = float(angular_z_joy)
+            joy_pub.publish(twist_joy)
 
-            cmd_pub.publish(twist)
+            # 오른쪽 스틱 → VR 원격 조작용 cmd_vel_vr
+            linear_x_vr = -norm_y_r * MAX_LINEAR_VEL
+            angular_z_vr = -norm_x_r * MAX_ANGULAR_VEL
+
+            twist_vr = Twist()
+            twist_vr.linear.x = float(linear_x_vr)
+            twist_vr.angular.z = float(angular_z_vr)
+            vr_pub.publish(twist_vr)
+
 
 # except KeyboardInterrupt:
 #     # print("\n종료합니다.")

@@ -76,13 +76,13 @@ def generate_launch_description():
     tf_base_laser = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        arguments = ['0', '0', '0.2', '0', '0', '0', 'base_link', l_params['frame_id']]
+        arguments = ['0', '0', '0.2', '3.141592', '0', '0', 'base_link', l_params['frame_id']]
     )
 
     tf_base_imu = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        arguments = ['0', '0', '0.1', '0', '0', '0', 'base_link', i_params['sensor_frame_id']]
+        arguments = ['0', '0', '0.3', '0', '0', '0', 'base_link', i_params['sensor_frame_id']]
     )
 
     return LaunchDescription([

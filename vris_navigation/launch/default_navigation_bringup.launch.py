@@ -15,7 +15,7 @@ def generate_launch_description():
     map_file_default = PathJoinSubstitution([
         FindPackageShare('vris_slam'),
         'maps',
-        'office_map.yaml' 
+        'dorm1.yaml' 
     ])
 
     # Nav2 파라미터 파일 (방금 수정한 nav2_params_test.yaml)

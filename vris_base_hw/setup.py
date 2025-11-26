@@ -31,6 +31,7 @@ setup(
         'console_scripts': [
             'cmd_vel_to_serial = vris_base_hw.cmd_vel_to_serial:main',
             'pwm_matching_tool = vris_base_hw.pwm_matching_tool:main',
+            'cmd_vel_to_serial_calibrated = vris_base_hw.cmd_vel_to_serial_calibrated:main',
         ],
     },
 )

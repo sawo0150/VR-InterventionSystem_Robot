@@ -30,6 +30,7 @@ setup(
         'console_scripts': [
             'gamepad_teleop = vris_teleop.gamepad_teleop_node:main',
             'gamepad_joy = vris_teleop.gamepad_joy_node:main',
+            'gamepad_joyManager_node = vris_teleop.gamepad_joyManager_node:main',
         ],
     },
 )
